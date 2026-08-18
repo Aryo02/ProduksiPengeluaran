@@ -138,8 +138,10 @@ def buat_gauge_chart(nilai, judul, subjudul):
 
 
 # --- KONEKSI GOOGLE SHEETS TERPUSAT ---
+creds_dict=st.secrets['gcp_service_account']
+
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name('projectmagang-493606-d4f49d55c237.json', scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name(creds_dict, scope)
 client = gspread.authorize(creds)
 spreadsheet_id = '1Iz_g6U1rXCsorma2Xjv5W2rGmH-v0yis_yoYf1stWrg'
 
