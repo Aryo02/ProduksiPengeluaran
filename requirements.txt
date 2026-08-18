@@ -4,5 +4,3 @@ numpy
 plotly
 gspread
 oauth2client
-base64
-math
