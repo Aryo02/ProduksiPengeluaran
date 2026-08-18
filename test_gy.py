@@ -304,7 +304,7 @@ if halaman == "📊 Dashboard Bulanan":
     try:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.image("C:/Users/ASUS/Downloads/.ipynb_checkpoints/Magang/Dash TimeS/Logo petro dkk.png", use_container_width=True)
+            st.image("Logo petro dkk.png", use_container_width=True)
     except FileNotFoundError:
         st.warning("⚠️ File logo belum dimasukkan atau nama file salah.")
 
@@ -427,7 +427,7 @@ elif halaman == "📈 Tren Harian (Line Chart)":
     try:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.image("C:/Users/ASUS/Downloads/.ipynb_checkpoints/Magang/Dash TimeS/Logo petro dkk.png", use_container_width=True)
+            st.image("Logo petro dkk.png", use_container_width=True)
     except FileNotFoundError:
         st.warning("⚠️ File logo belum dimasukkan atau nama file salah.")
         
