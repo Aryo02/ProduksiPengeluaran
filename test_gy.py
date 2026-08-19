@@ -232,15 +232,17 @@ def load_data_harian():
         data = sheet.get_all_values()
         if not data: return None
         
-        header1 = data[0]
-        data_rows = data[2:]
+        header1 = data[0] # Baris 1 (Berisi nama Produk)
+        header2 = data[1] # Baris 2 (Berisi No, Tanggal, Produksi, Stok...)
+        data_rows = data[2:] # Baris 3 ke bawah (Data angka)
         
         produk_list = []
         for p in header1:
             if p and p not in ["No", "Tanggal", ""]:
                 produk_list.append(p)
                 
-        idx_tanggal = header1.index("Tanggal")
+        # PERBAIKAN: Cari kata "Tanggal" di header2 (Baris 2), bukan header1
+        idx_tanggal = header2.index("Tanggal") 
         
         list_df_produk = []
         for row in data_rows:
@@ -249,6 +251,7 @@ def load_data_harian():
                 
             for i, p in enumerate(header1):
                 if p in produk_list:
+                    # Ambil data berdasarkan urutan kolom: Produksi, Stok, Pengeluaran
                     raw_produksi = str(row[i]).strip().replace(',', '')
                     raw_stok = str(row[i+1]).strip().replace(',', '')
                     raw_pengeluaran = str(row[i+2]).strip().replace(',', '')
