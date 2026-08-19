@@ -26,7 +26,7 @@ def get_img_as_base64(file):
         return None
 
 
-bg_img_path = "PG_website1_Kantor-Pusat-Petrokimia-Gresik.JPEG"
+bg_img_path = "PG_website1_Kantor-Pusat-Petrokimia-Gresik.jpeg"
 bg_img_base64 = get_img_as_base64(bg_img_path)
 
 if bg_img_base64:
