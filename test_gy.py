@@ -225,6 +225,7 @@ def load_data_bulanan():
         return None
 
 # --- FUNGSI LOAD DATA SHEET 3 (HARIAN) ---
+@st.cache_data
 def load_data_harian():
     try:
         sheet = client.open_by_key(spreadsheet_id).worksheet('Sheet3')
