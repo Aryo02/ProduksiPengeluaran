@@ -225,46 +225,32 @@ def load_data_bulanan():
         return None
 
 # --- FUNGSI LOAD DATA SHEET 3 (HARIAN) ---
-@st.cache_data 
 def load_data_harian():
     try:
         sheet = client.open_by_key(spreadsheet_id).worksheet('Sheet3')
         data = sheet.get_all_values()
         if not data: return None
         
-        header1 = data[0] # Baris 1 (Kosong, Kosong, Kaptan, ...)
-        header2 = data[1] # Baris 2 (No, Tanggal, Produksi, Stok, ...)
-        data_rows = data[2:] # Baris 3 ke bawah
+        header1 = data[0]
+        data_rows = data[2:]
         
         produk_list = []
         for p in header1:
             if p and p not in ["No", "Tanggal", ""]:
                 produk_list.append(p)
                 
-        # PERBAIKAN UTAMA: Cari kata "Tanggal" di Baris 2, bukan Baris 1
-        header2_bersih = [str(kolom).strip().lower() for kolom in header2]
-        idx_tanggal = header2_bersih.index("Tanggal") 
+        idx_tanggal = header1.index("Tanggal")
         
         list_df_produk = []
         for row in data_rows:
-            # Proteksi jika ada baris kosong di bagian paling bawah sheet
-            if len(row) <= idx_tanggal:
-                continue
-                
-            tanggal_str = str(row[idx_tanggal]).strip()
-            if not tanggal_str: 
-                continue
-                
-            tanggal = pd.to_datetime(tanggal_str, errors='ignore')
-            if pd.isna(tanggal): 
-                continue
+            tanggal = pd.to_datetime(row[idx_tanggal], errors='ignore')
+            if pd.isna(tanggal): continue
                 
             for i, p in enumerate(header1):
                 if p in produk_list:
-                    # Proteksi jika indeks kolom melebihi jumlah kolom yang ada di baris tersebut
-                    raw_produksi = str(row[i]).strip().replace(',', '') if i < len(row) else ""
-                    raw_stok = str(row[i+1]).strip().replace(',', '') if i+1 < len(row) else ""
-                    raw_pengeluaran = str(row[i+2]).strip().replace(',', '') if i+2 < len(row) else ""
+                    raw_produksi = str(row[i]).strip().replace(',', '')
+                    raw_stok = str(row[i+1]).strip().replace(',', '')
+                    raw_pengeluaran = str(row[i+2]).strip().replace(',', '')
                     
                     try:
                         val_produksi = float(raw_produksi) if raw_produksi != "" else 0.0
@@ -290,15 +276,12 @@ def load_data_harian():
                     })
         
         df_final = pd.DataFrame(list_df_produk)
-        if not df_final.empty:
-            df_final = df_final.sort_values('Tanggal')
-            
+        df_final = df_final.sort_values('Tanggal')
         return df_final, produk_list
 
     except Exception as e:
         st.error(f"Gagal memuat Sheet3: {e}")
         return None, []
-
 # --- NAVIGASI SIDEBAR ---
 try:
     st.sidebar.image("logo-pi.png", width=200)
