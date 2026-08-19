@@ -242,7 +242,8 @@ def load_data_harian():
                 produk_list.append(p)
                 
         # PERBAIKAN UTAMA: Cari kata "Tanggal" di Baris 2, bukan Baris 1
-        idx_tanggal = header2.index("Tanggal") 
+        header2_bersih = [str(kolom).strip().lower() for kolom in header2]
+        idx_tanggal = header2_bersih.index("Tanggal") 
         
         list_df_produk = []
         for row in data_rows:
