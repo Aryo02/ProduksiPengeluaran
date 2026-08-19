@@ -22,8 +22,7 @@ def get_img_as_base64(file):
         with open(file, "rb") as f:
             data = f.read()
         return base64.b64encode(data).decode()
-    except Exception as e:
-        return None
+
 
 bg_img_path = "PG_website1_Kantor-Pusat-Petrokimia-Gresik.JPEG"
 bg_img_base64 = get_img_as_base64(bg_img_path)
