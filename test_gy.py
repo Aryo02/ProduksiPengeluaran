@@ -225,66 +225,79 @@ def load_data_bulanan():
         return None
 
 # --- FUNGSI LOAD DATA SHEET 3 (HARIAN) ---
-@st.cache_data
+@st.cache_data 
 def load_data_harian():
     try:
         sheet = client.open_by_key(spreadsheet_id).worksheet('Sheet3')
         data = sheet.get_all_values()
-        if not data: return None
+        if not data or len(data) < 3: 
+            return None, []
         
-        header1 = data[0]
-        header2 = data[1]
-        data_rows = data[2:]
+        header1 = data[0]  # Baris 1: Nama-nama Produk
+        header2 = data[1]  # Baris 2: Sub-header (No, Tanggal, Produksi, Stok, Pengeluaran)
+        data_rows = data[2:]  # Baris 3 ke bawah: Data angka
+
+        # 1. Tentukan indeks tanggal secara aman (Cari 'tanggal', jika tidak ada default ke Kolom B / indeks 1)
+        idx_tanggal = 1
+        for idx, val in enumerate(header2):
+            if "tanggal" in str(val).strip().lower():
+                idx_tanggal = idx
+                break
         
-        produk_list = []
-        for p in header1:
-            if p and p not in ["No", "Tanggal", ""]:
-                produk_list.append(p)
-                
-        header2_bersih = [str(kolom).strip().lower() for kolom in header2]        
-        idx_tanggal = header2_bersih.index("Tanggal")
-        
+        # 2. Petakan kolom produk secara spesifik
+        # Mengambil index di mana nama produk muncul di Baris 1
+        produk_cols = {}
+        for i, p in enumerate(header1):
+            p_clean = str(p).strip()
+            if p_clean and p_clean.lower() not in ["no", "tanggal", "none", ""]:
+                produk_cols[i] = p_clean
+
+        produk_list = list(dict.fromkeys(produk_cols.values())) # Daftar unik produk
+
         list_df_produk = []
         for row in data_rows:
+            # Lewati jika baris terlalu pendek atau kolom tanggal kosong
             if len(row) <= idx_tanggal:
                 continue
                 
-            tanggal_str = str(row[idx_tanggal]).strip()
-            if not tanggal_str: 
+            raw_tgl = str(row[idx_tanggal]).strip()
+            if not raw_tgl:
+                continue
+            
+            # Parsing format tanggal (misal: "29 January 2024" atau "01/01/2024")
+            tanggal = pd.to_datetime(raw_tgl, errors='coerce', dayfirst=True)
+            if pd.isna(tanggal):
                 continue
                 
-            tanggal = pd.to_datetime(tanggal_str, errors='ignore')
-            if pd.isna(tanggal): 
-                continue
-                
-            for i, p in enumerate(header1):
-                if p in produk_list:
-                    raw_produksi = str(row[i]).strip().replace(',', '') if i < len(row) else ""
-                    raw_stok = str(row[i+1]).strip().replace(',', '') if i+1 < len(row) else ""
-                    raw_pengeluaran = str(row[i+2]).strip().replace(',', '') if i+2 < len(row) else ""
-                    
-                    try:
-                        val_produksi = float(raw_produksi) if raw_produksi != "" else 0.0
-                    except ValueError:
-                        val_produksi = 0.0
-                    
-                    try:
-                        val_stok = float(raw_stok) if raw_stok != "" else 0.0
-                    except ValueError:
-                        val_stok = 0.0
-                        
-                    try:
-                        val_pengeluaran = float(raw_pengeluaran) if raw_pengeluaran != "" else 0.0
-                    except ValueError:
-                        val_pengeluaran = 0.0
-                    
-                    list_df_produk.append({
-                        "Tanggal": tanggal,
-                        "Produk": p,
-                        "Produksi": val_produksi,
-                        "Stok": val_stok,
-                        "Pengeluaran": val_pengeluaran
-                    })
+            # Ambil nilai produksi, stok, dan pengeluaran per produk
+            for col_idx, nama_prod in produk_cols.items():
+                # Proteksi batas kolom
+                raw_prod = str(row[col_idx]).strip().replace(',', '') if col_idx < len(row) else ""
+                raw_stok = str(row[col_idx + 1]).strip().replace(',', '') if col_idx + 1 < len(row) else ""
+                raw_keluar = str(row[col_idx + 2]).strip().replace(',', '') if col_idx + 2 < len(row) else ""
+
+                try:
+                    val_prod = float(raw_prod) if raw_prod != "" else 0.0
+                except ValueError:
+                    val_prod = 0.0
+
+                try:
+                    val_stok = float(raw_stok) if raw_stok != "" else 0.0
+                except ValueError:
+                    val_stok = 0.0
+
+                try:
+                    val_keluar = float(raw_keluar) if raw_keluar != "" else 0.0
+                except ValueError:
+                    val_keluar = 0.0
+
+                list_df_produk.append({
+                    "Tanggal": tanggal,
+                    "Produk": nama_prod,
+                    "Produksi": val_prod,
+                    "Stok": val_stok,
+                    "Pengeluaran": val_keluar
+                })
         
         df_final = pd.DataFrame(list_df_produk)
         if not df_final.empty:
