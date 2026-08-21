@@ -585,6 +585,13 @@ elif halaman == "📝 Input Data Harian":
         }
     </style>
     """, unsafe_allow_html=True)
+    try:
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image("C:/Users/ASUS/Downloads/.ipynb_checkpoints/Magang/Dash TimeS/Logo petro dkk.png", use_container_width=True)
+    except FileNotFoundError:
+            st.warning("⚠️ File logo belum dimasukkan atau nama file salah.")
+        
     st.title("📝 Input & Kelola Data Harian")
     st.markdown("Tambahkan data baru atau kelola baris tabel secara langsung ke Google Sheets.")
     
