@@ -316,7 +316,7 @@ except FileNotFoundError:
     pass
 
 st.sidebar.title("Navigasi Dashboard")
-halaman = st.sidebar.radio("Pilih Halaman:", ["📊 Dashboard Bulanan", "📈 Tren Harian (Line Chart)"])
+halaman = st.sidebar.radio("Pilih Halaman:", ["📊 Dashboard Bulanan", "📈 Tren Harian (Line Chart)", "📝 Input Data Harian"])
 
 # --- TOMBOL REFRESH DATA (BARU DITAMBAHKAN) ---
 st.sidebar.divider()
@@ -559,3 +559,167 @@ elif halaman == "📈 Tren Harian (Line Chart)":
             
     else:
         st.warning("Data harian di Sheet3 tidak ditemukan atau format tabel tidak sesuai.")
+
+# =====================================================================
+# --- HALAMAN 3: INPUT & MANAJEMEN DATA HARIAN ---
+# =====================================================================
+elif halaman == "📝 Input Data Harian":
+    # --- INJEKSI CSS UNTUK BACKGROUND FORM & CONTAINER ---
+    st.markdown("""
+    <style>
+        /* Latar belakang untuk Form Input */
+        [data-testid="stForm"] {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-radius: 15px !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 25px 20px !important;
+        }
+        /* Latar belakang untuk Panel Manajemen (Container dengan border) */
+        [data-testid="stVerticalBlockBorderWrapper"] {
+            background-color: rgba(255, 255, 255, 0.85) !important;
+            border-radius: 15px !important;
+            border: 1px solid #d1d5db !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            padding: 10px !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    st.title("📝 Input & Kelola Data Harian")
+    st.markdown("Tambahkan data baru atau kelola baris tabel secara langsung ke Google Sheets.")
+    
+    try:
+        # Buka koneksi langsung ke Sheet3
+        sheet3 = client.open_by_key(spreadsheet_id).worksheet('Sheet3')
+        data_sheet3 = sheet3.get_all_values()
+        
+        if data_sheet3 and len(data_sheet3) >= 2:
+            header1 = data_sheet3[0]
+            header2 = data_sheet3[1]
+            
+            # Cari indeks kolom Tanggal
+            header2_bersih = [str(x).strip().lower() for x in header2]
+            idx_tgl = header2_bersih.index("tanggal") if "tanggal" in header2_bersih else 1
+            
+            # Petakan Produk dengan Indeks Kolomnya
+            produk_cols = {}
+            for i, p in enumerate(header1):
+                p_clean = str(p).strip()
+                if p_clean and p_clean.lower() not in ["no", "tanggal", "none", ""]:
+                    produk_cols[p_clean] = i
+                    
+            list_produk_input = list(produk_cols.keys())
+            
+            # --- FORM INPUT DATA ---
+            st.subheader("➕ Tambah / Update Data Harian")
+            with st.form("form_input"):
+                col_in1, col_in2 = st.columns(2)
+                
+                with col_in1:
+                    tgl_input = st.date_input("Pilih Tanggal")
+                    produk_input = st.selectbox("Pilih Produk", options=list_produk_input)
+                
+                with col_in2:
+                    val_produksi = st.number_input("Jumlah Produksi", min_value=0.0, step=0.1)
+                    val_stok = st.number_input("Jumlah Stok", min_value=0.0, step=0.1)
+                    val_pengeluaran = st.number_input("Jumlah Pengeluaran", min_value=0.0, step=0.1)
+                    
+                submit_btn = st.form_submit_button("Simpan Data")
+                
+            if submit_btn:
+                with st.spinner('Menyimpan data ke Google Sheets...'):
+                    # Format tanggal (misal: "29 January 2024")
+                    tgl_str = f"{tgl_input.day} {tgl_input.strftime('%B %Y')}"
+                    
+                    # Cari apakah tanggal sudah ada di sheet
+                    baris_target = -1
+                    for r_idx, row in enumerate(data_sheet3):
+                        if r_idx < 2: continue
+                        if len(row) > idx_tgl and str(row[idx_tgl]).strip() == tgl_str:
+                            baris_target = r_idx + 1 # +1 karena gspread menggunakan index mulai dari 1
+                            break
+                            
+                    col_base = produk_cols[produk_input] + 1 # +1 untuk format gspread
+                    
+                    if baris_target != -1:
+                        # Jika tanggal sudah ada, timpa (update) sel spesifik tersebut
+                        sheet3.update_cell(baris_target, col_base, val_produksi)
+                        sheet3.update_cell(baris_target, col_base + 1, val_stok)
+                        sheet3.update_cell(baris_target, col_base + 2, val_pengeluaran)
+                        st.success(f"✅ Data {produk_input} pada tanggal {tgl_str} berhasil diperbarui!")
+                    else:
+                        # Jika tanggal belum ada, buat baris baru di bawah
+                        new_row = [""] * len(header2)
+                        new_row[idx_tgl] = tgl_str
+                        
+                        # Kolom "No" otomatis
+                        try:
+                            last_no = int(data_sheet3[-1][0]) if data_sheet3[-1][0].isdigit() else len(data_sheet3) - 2
+                            new_row[0] = str(last_no + 1)
+                        except:
+                            new_row[0] = ""
+                            
+                        new_row[col_base - 1] = val_produksi
+                        new_row[col_base] = val_stok
+                        new_row[col_base + 1] = val_pengeluaran
+                        sheet3.append_row(new_row)
+                        st.success(f"✅ Baris data baru untuk tanggal {tgl_str} berhasil ditambahkan!")
+                    
+                    st.cache_data.clear() # Hapus cache agar grafik otomatis terupdate
+            
+            st.divider()
+            
+            # --- PANEL MANAJEMEN DATA ---
+            st.subheader("⚙️ Panel Manajemen Tabel")
+            col_m1, col_m2 = st.columns(2)
+            
+            with col_m1:
+                st.markdown("**Hapus Baris Data**")
+                # Ambil daftar tanggal unik yang ada di sheet
+                list_tgl_ada = []
+                for r_idx, row in enumerate(data_sheet3):
+                    if r_idx >= 2 and len(row) > idx_tgl:
+                        t = str(row[idx_tgl]).strip()
+                        if t and t not in list_tgl_ada:
+                            list_tgl_ada.append(t)
+                            
+                hapus_tgl = st.selectbox("Pilih tanggal yang ingin dihapus:", ["-- Pilih --"] + list_tgl_ada)
+                if st.button("🗑️ Hapus Baris"):
+                    if hapus_tgl != "-- Pilih --":
+                        with st.spinner("Menghapus data..."):
+                            # Hapus dari indeks paling bawah agar urutan tidak bergeser saat looping
+                            for r_idx in range(len(data_sheet3)-1, 1, -1):
+                                if len(data_sheet3[r_idx]) > idx_tgl and str(data_sheet3[r_idx][idx_tgl]).strip() == hapus_tgl:
+                                    sheet3.delete_rows(r_idx + 1)
+                            st.success(f"Seluruh data pada {hapus_tgl} telah dihapus!")
+                            st.cache_data.clear()
+                            st.rerun()
+            
+            with col_m2:
+                st.markdown("**Urutkan (Sort) Data Kronologis**")
+                st.info("Rapikan susunan baris di Google Sheets jika ada data yang melompat/terselip.")
+                if st.button("🔽 Sortir Berdasarkan Tanggal"):
+                    with st.spinner("Mengurutkan tabel..."):
+                        head_part = data_sheet3[:2]
+                        body_part = data_sheet3[2:]
+                        
+                        # Logika sortir menggunakan pandas datetime
+                        def get_date_val(row):
+                            if len(row) > idx_tgl:
+                                d = pd.to_datetime(str(row[idx_tgl]).strip(), errors='coerce')
+                                if not pd.isna(d): return d
+                            return pd.Timestamp.min
+                            
+                        body_part.sort(key=get_date_val)
+                        
+                        # Perbarui seluruh sheet dengan urutan baru
+                        sheet3.update(values=head_part + body_part, range_name="A1")
+                        st.success("Tabel berhasil diurutkan berdasarkan tanggal secara kronologis!")
+                        st.cache_data.clear()
+                        st.rerun()
+
+        else:
+            st.warning("Struktur data Sheet3 belum terdeteksi. Pastikan sheet tidak kosong.")
+            
+    except Exception as e:
+        st.error(f"Gagal memuat Halaman Input: {e}")
